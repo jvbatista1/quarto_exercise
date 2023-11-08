@@ -39,6 +39,7 @@ registration <- readRDS(file.path(input, "REGISTRATION/registration.RDS"))
 turnout <- readRDS(file.path(input, "TURNOUT/turnout_2022.RDS"))
 turnout_tte <- readRDS(file.path(input, "TURNOUT/turnout_tte_2022.RDS"))
 population <- readRDS(file.path(input, "populationBR_year.RDS"))
+population_city <- readRDS(file.path(input, "populationBR_cities_year.RDS"))
 
 ```
 
@@ -127,15 +128,26 @@ justificativa_2t <- sum(justificativa_2t$`Quantidade de justificativas`)
 #| echo: false
 #| cache: true
 
+# First, lets get the population of each state
+state_pop <- population_city |> 
+  group_by(state) |> 
+  summarize(pop = sum(pop_estimate)) |> 
+  #add population abroad. Source: https://www.gov.br/mre/pt-br/assuntos/portal-consular/BrasileirosnoExterior.pdf 
+  add_row(state = "ZZ", pop = 4598735)
+
 justification |>
   group_by(UF) |> 
   summarize(contagem = sum(`Quantidade de justificativas`)) |> 
-  ggplot(aes(x=fct_reorder(UF, contagem), y=contagem, color=UF)) +
+  left_join(state_pop, join_by(UF == state)) |> 
+  mutate(contagem_prop = contagem/pop) |> 
+  ggplot(aes(x=fct_reorder(UF, contagem_prop), y=contagem_prop, color=UF)) +
   geom_col()+
+  scale_y_continuous(labels = percent)+
   labs (
     title = "Justifications, by state",
     x="State",
-    y="Number of processes")+
+    y="Number of processes divided by population",
+    caption = "* ZZ stands for voters abroad")+
   theme(legend.position = "none")
 ```
 
@@ -232,15 +244,27 @@ rae2022 <- sum(rae2022$`Quantidade de RAE`)
 #| label: graph3
 #| echo: false
 #| cache: true
+
+# First, lets get the population of each state
+state_pop <- population_city |> 
+  group_by(state) |> 
+  summarize(pop = sum(pop_estimate)) |> 
+  #add population abroad. Source: https://www.gov.br/mre/pt-br/assuntos/portal-consular/BrasileirosnoExterior.pdf 
+  add_row(state = "ZZ", pop = 4598735)
+
 registration |> 
   filter(`Tipo de operação` == "Transferência") |> 
   group_by(UF) |> 
   summarize(contagem = sum(`Quantidade de RAE`)) |> 
-  ggplot(aes(x=fct_reorder(UF, contagem), y=contagem, color=UF)) +
+  left_join(state_pop, join_by(UF == state)) |> 
+  mutate(contagem_prop = contagem/pop) |>
+  ggplot(aes(x=fct_reorder(UF, contagem_prop), y=contagem_prop, color=UF)) +
   geom_col()+
+  scale_y_continuous(labels = percent)+
   labs (
     title = "Registration transfers, by state",
     x="State",
-    y="Number of processes")+
+    y="Number of processes divided by population",
+    caption = "* ZZ stands for voters abroad")+
   theme(legend.position = "none")
 ```
