@@ -4,6 +4,7 @@ author: "Victor Batista"
 format: html
 editor: visual
 ---
+
 ```{r}
 #| label: libraries
 #| include: false
